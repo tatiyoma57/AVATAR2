@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Bot de Cuencas Hidrológicas</title>
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --primary-dark: #1976D2;
+            --accent-color: #4CAF50;
+            --accent-dark: #388E3C;
+            --danger-color: #F44336;
+            --light-bg: #F5F5F5;
+            --dark-text: #333333;
+            --light-text: #FFFFFF;
+            --border-color: #E0E0E0;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--dark-text);
+            background-color: var(--light-bg);
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            background-color: var(--primary-color);
+            color: var(--light-text);
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .topic-list {
+            background-color: #E3F2FD;
+            padding: 10px 20px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .topic-list ul {
+            display: flex;
+            flex-wrap: wrap;
+            list-style-type: none;
+            margin-top: 5px;
+        }
+        
+        .topic-list li {
+            margin-right: 15px;
+            margin-bottom: 5px;
+            background-color: #BBDEFB;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            position: relative;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .bot-message {
+            background-color: #E3F2FD;
+            color: var(--dark-text);
+            border-bottom-left-radius: 5px;
+            align-self: flex-start;
+        }
+        
+        .user-message {
+            background-color: var(--primary-color);
+            color: var(--light-text);
+            border-bottom-right-radius: 5px;
+            align-self: flex-end;
+        }
+        
+        .bot-message::before {
+            content: "🤖";
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .user-message::before {
+            content: "👤";
+            display: inline-block;
+            margin-right: 8px;
+        }
+        
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            background-color: white;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 25px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border 0.3s;
+        }
+        
+        .chat-input input:focus {
+            border-color: var(--primary-color);
+        }
+        
+        .chat-input button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 0 20px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        .chat-input button:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        .reset-button {
+            background-color: transparent;
+            border: none;
+            color: var(--light-text);
+            font-size: 0.9rem;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        .reset-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            background-color: #E3F2FD;
+            padding: 10px 15px;
+            border-radius: 18px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+        
+        .typing-indicator::after {
+            content: '...';
+            animation: typing 1.5s infinite;
+        }
+        
+        @keyframes typing {
+            0% { content: '.'; }
+            33% { content: '..'; }
+            66% { content: '...'; }
+        }
+        
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            Chat Bot de Cuencas Hidrológicas
+            <button id="resetButton" class="reset-button">Nueva Conversación</button>
+        </div>
+        
+        <div class="topic-list">
+            <div>Temas disponibles:</div>
+            <ul>
+                <li>Cuencas hidrológicas</li>
+                <li>Hidrología</li>
+                <li>Erosión</li>
+                <li>Climatología</li>
+                <li>Cambio climático</li>
+            </ul>
+        </div>
+        
+        <div id="chatMessages" class="chat-messages">
+            <!-- Los mensajes se añadirán aquí dinámicamente -->
+            <div class="typing-indicator" id="typingIndicator">Escribiendo</div>
+        </div>
+        
+        <div class="chat-input">
+            <input type="text" id="userInput" placeholder="Escribe tu mensaje aquí..." autocomplete="off">
+            <button id="sendButton">Enviar</button>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let userName = "";
+        let isWaitingForName = true;
+        
+        // Elementos del DOM
+        const chatMessages = document.getElementById('chatMessages');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const resetButton = document.getElementById('resetButton');
+        const typingIndicator = document.getElementById('typingIndicator');
+        
+        // Función para añadir mensaje al chat
+        function addMessage(message, isBot = false) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.classList.add(isBot ? 'bot-message' : 'user-message');
+            messageElement.textContent = message;
+            
+            // Insertar antes del indicador de escritura
+            chatMessages.insertBefore(messageElement, typingIndicator);
+            
+            // Scroll automático al último mensaje
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Mostrar indicador de escritura
+        function showTyping() {
+            typingIndicator.style.display = 'block';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Ocultar indicador de escritura
+        function hideTyping() {
+            typingIndicator.style.display = 'none';
+        }
+        
+        // Procesar la entrada del usuario
+        function processUserInput() {
+            const message = userInput.value.trim();
+            if (!message) return;
+            
+            // Añadir mensaje del usuario al chat
+            addMessage(message);
+            userInput.value = '';
+            
+            // Mostrar que el bot está escribiendo
+            showTyping();
+            
+            // Simular tiempo de procesamiento (más natural)
+            setTimeout(() => {
+                hideTyping();
+                
+                if (isWaitingForName) {
+                    handleNameResponse(message);
+                } else {
+                    processUserQuery(message);
+                }
+            }, Math.random() * 1000 + 500); // Entre 500ms y 1500ms
+        }
+        
+        // Manejar respuesta del nombre
+        function handleNameResponse(text) {
+            // Extraer nombre
+            let extractedName = "";
+            
+            if (text.toLowerCase().includes("me llamo ")) {
+                extractedName = text.split("me llamo ")[1].split(" ")[0];
+            } else if (text.toLowerCase().includes("mi nombre es ")) {
+                extractedName = text.split("mi nombre es ")[1].split(" ")[0];
+            } else if (text.toLowerCase().includes("soy ")) {
+                extractedName = text.split("soy ")[1].split(" ")[0];
+            } else {
+                // Si no hay patrón, usar la primera palabra o todo si es corto
+                const nameParts = text.split(" ");
+                if (nameParts.length === 1 || text.length < 15) {
+                    extractedName = text;
+                } else {
+                    extractedName = nameParts[0];
+                }
+            }
+            
+            // Capitalizar primera letra
+            userName = extractedName.charAt(0).toUpperCase() + extractedName.slice(1).toLowerCase();
+            
+            // Dar la bienvenida al usuario
+            const welcomeMessage = `Gracias ${userName}. Soy tu experto en cuencas hidrográficas, hidrología, erosión, climatología y cambio climático. ¿Qué deseas saber sobre estos temas?`;
+            addMessage(welcomeMessage, true);
+            
+            isWaitingForName = false;
+        }
+        
+        // Procesar la consulta del usuario y generar una respuesta
+        function processUserQuery(query) {
+            query = query.toLowerCase();
+            let response = "";
+
+            // Base de conocimiento extendida con preguntas más específicas
+            if (query.includes("cuenca")) {
+                if (query.includes("importancia") || query.includes("por qué") || query.includes("por que") || query.includes("para qué") || query.includes("para que")) {
+                    response =
+                    `${userName}, las cuencas hidrográficas son importantes porque actúan como sistemas naturales que capturan y administran el agua. Son esenciales para el suministro de agua, regulan el flujo hídrico, previenen inundaciones, mantienen ecosistemas saludables y sustentan la biodiversidad.`;
+                } else if (query.includes("tipos") || query.includes("clasificación") || query.includes("clasificacion")) {
+                    response =
+                    `${userName}, las cuencas hidrográficas se clasifican principalmente en: exorreicas (drenan al mar), endorreicas (drenan a lagos o lagunas internas), y arreicas (donde el agua se evapora o filtra antes de formar corrientes). También pueden clasificarse por tamaño en microcuencas, subcuencas y cuencas.`;
+                } else if (query.includes("conservar") || query.includes("proteger") || query.includes("preservar") || query.includes("cuidar")) {
+                    response =
+                    `${userName}, para conservar las cuencas hidrográficas es fundamental implementar prácticas de reforestación, controlar la erosión, regular el uso del suelo, evitar la contaminación del agua, promover la agricultura sostenible y establecer áreas protegidas dentro de la cuenca.`;
+                } else {
+                    response =
+                    `${userName}, las cuencas hidrográficas son áreas delimitadas donde se recoge, conduce y dispersa el agua de lluvia. Son unidades fundamentales para la gestión del agua y los recursos naturales. ¿Te gustaría saber algo más específico sobre ellas, como su manejo o importancia ecológica?`;
+                }
+            } 
+            else if (query.includes("hidrología") || query.includes("hidrologia")) {
+                if (query.includes("ciclo") || query.includes("agua") || query.includes("proceso")) {
+                    response =
+                    `${userName}, el ciclo hidrológico es el proceso continuo donde el agua circula entre la atmósfera, superficie terrestre y subsuelo. Sus principales fases son: evaporación, condensación, precipitación, infiltración, escorrentía y transpiración. Este ciclo es fundamental para entender los procesos hidrológicos en una cuenca.`;
+                } else if (query.includes("modelación") || query.includes("modelacion") || query.includes("modelo") || query.includes("predecir")) {
+                    response =
+                    `${userName}, en hidrología usamos modelos matemáticos para predecir el comportamiento del agua. Estos pueden ser modelos estadísticos, conceptuales o físicamente basados. Herramientas como HEC-HMS, SWAT o MODFLOW nos permiten simular caudales, inundaciones o movimiento de agua subterránea para una mejor gestión de recursos hídricos.`;
+                } else if (query.includes("agua subterránea") || query.includes("agua subterranea") || query.includes("acuífero") || query.includes("acuifero")) {
+                    response =
+                    `${userName}, el agua subterránea representa aproximadamente el 30% del agua dulce del planeta. Los acuíferos son formaciones geológicas que almacenan y transmiten agua. Son vitales para el abastecimiento humano y mantienen el flujo base de ríos durante períodos secos. Su sobreexplotación y contaminación son problemas graves en muchas regiones.`;
+                } else {
+                    response =
+                    `${userName}, la hidrología es la ciencia que estudia el comportamiento del agua en nuestro planeta, incluyendo el ciclo hidrológico y la calidad del agua. Permite comprender y gestionar los recursos hídricos disponibles. ¿Tienes alguna pregunta específica sobre estos procesos?`;
+                }
+            } 
+            else if (query.includes("erosión") || query.includes("erosion")) {
+                if (query.includes("tipos") || query.includes("formas")) {
+                    response =
+                    `${userName}, existen varios tipos de erosión: hídrica (causada por lluvia y escorrentía), eólica (por viento), glacial (por hielo), y antropogénica (actividades humanas). En cuencas hidrográficas, la erosión hídrica predomina con sus subtipos: laminar, en surcos, cárcavas y riberas.`;
+                } else if (query.includes("control") || query.includes("prevenir") || query.includes("evitar") || query.includes("reducir")) {
+                    response =
+                    `${userName}, para controlar la erosión en cuencas hidrográficas se implementan medidas como terrazas agrícolas, barreras vivas, cultivos en curvas de nivel, cobertura vegetal permanente, reforestación, y estructuras como gaviones y diques. Estas prácticas de conservación de suelos reducen la velocidad del agua y retienen sedimentos.`;
+                } else if (query.includes("impacto") || query.includes("consecuencia") || query.includes("efecto")) {
+                    response =
+                    `${userName}, la erosión deteriora la fertilidad del suelo, reduce la capacidad de retención de agua, aumenta la sedimentación en ríos y embalses (reduciendo su vida útil), incrementa el riesgo de inundaciones, afecta la calidad del agua y destruye infraestructura. También contribuye a la desertificación y pérdida de biodiversidad.`;
+                } else {
+                    response =
+                    `${userName}, la erosión es el proceso de desgaste, transporte y sedimentación de materiales del suelo por diversos agentes como el agua, el viento o la gravedad. En cuencas hidrográficas, la erosión hídrica es un problema grave que puede causar pérdida de suelo fértil, sedimentación en ríos y embalses, y aumentar el riesgo de inundaciones. El manejo adecuado de la vegetación y prácticas de conservación son fundamentales para su control.`;
+                }
+            } 
+            else if (query.includes("climatología") || query.includes("climatologia") || query.includes("clima")) {
+                if (query.includes("factor") || query.includes("influencia") || query.includes("afecta")) {
+                    response =
+                    `${userName}, los factores climáticos que influyen en las cuencas hidrográficas incluyen: precipitación (cantidad, intensidad, distribución), temperatura (evaporación y transpiración), humedad relativa, radiación solar, viento y presión atmosférica. Estos elementos determinan el balance hídrico y el comportamiento hidrológico de la cuenca.`;
+                } else if (query.includes("monitoreo") || query.includes("estación") || query.includes("estacion") || query.includes("medir")) {
+                    response =
+                    `${userName}, el monitoreo climatológico en cuencas se realiza mediante estaciones meteorológicas que miden precipitación, temperatura, humedad, radiación solar y viento. Actualmente, complementamos estas mediciones con sensores remotos, satélites y drones. Estos datos son fundamentales para modelación hidrológica y sistemas de alerta temprana.`;
+                } else if (query.includes("zona") || query.includes("región") || query.includes("region") || query.includes("diferencia")) {
+                    response =
+                    `${userName}, las condiciones climatológicas varían significativamente entre cuencas según su ubicación geográfica, altitud y orografía. Cuencas en zonas tropicales tienen regímenes de precipitación diferentes a las de zonas templadas o áridas. Las cuencas de montaña presentan gradientes altitudinales que crean microclimas y afectan los patrones hidrológicos locales.`;
+                } else {
+                    response =
+                    `${userName}, la climatología estudia el clima y sus variaciones a largo plazo. Para las cuencas hidrográficas, es esencial entender los patrones climáticos ya que determinan la disponibilidad de agua. Los factores como precipitación, temperatura, humedad y vientos influyen directamente en los procesos hidrológicos de una cuenca. Los estudios climatológicos permiten planificar la gestión del agua y prepararse para eventos extremos.`;
+                }
+            } 
+            else if (query.includes("cambio climático") || query.includes("cambio climatico")) {
+                if (query.includes("impacto") || query.includes("efecto") || query.includes("consecuencia")) {
+                    response =
+                    `${userName}, el cambio climático impacta las cuencas hidrográficas mediante alteraciones en patrones de precipitación, intensificación de eventos extremos (sequías e inundaciones), reducción de glaciares que alimentan ríos, elevación del nivel del mar afectando cuencas costeras, y cambios en los ecosistemas que afectan la calidad y cantidad de agua disponible.`;
+                } else if (query.includes("adaptación") || query.includes("adaptacion") || query.includes("adaptar") || query.includes("enfrentar")) {
+                    response =
+                    `${userName}, las estrategias de adaptación al cambio climático en cuencas incluyen: infraestructura verde-azul, restauración de ecosistemas riparios, sistemas de captación de agua de lluvia, mejora de eficiencia en uso de agua, diversificación de fuentes de abastecimiento, seguros contra riesgos climáticos y sistemas de alerta temprana para eventos extremos.`;
+                } else if (query.includes("mitigación") || query.includes("mitigacion") || query.includes("reducir") || query.includes("disminuir")) {
+                    response =
+                    `${userName}, las cuencas hidrográficas contribuyen a mitigar el cambio climático mediante la captura de carbono en bosques y suelos. Estrategias como reforestación, conservación de humedales, prácticas agrícolas sostenibles y generación de energía hidroeléctrica sostenible reducen emisiones de gases de efecto invernadero mientras mejoran la resiliencia de la cuenca.`;
+                } else {
+                    response =
+                    `${userName}, el cambio climático está alterando los patrones hidrológicos en las cuencas. Se observan fenómenos como lluvias más intensas pero menos frecuentes, aumento de sequías, derretimiento acelerado de glaciares y mayor evaporación. Estos cambios afectan la disponibilidad y calidad del agua, exigiendo estrategias de adaptación como infraestructura resiliente, sistemas de alerta temprana y gestión integrada de cuencas. La restauración de ecosistemas riparios también es fundamental para mitigar sus efectos.`;
+                }
+            } 
+            else if (query.includes("ciclo")) {
+                response = 
+                `${userName}, el ciclo hidrológico es el proceso de circulación del agua entre la atmósfera y la Tierra. Incluye la evaporación, condensación, precipitación, infiltración, escorrentía y transpiración. En una cuenca hidrográfica, este ciclo determina la disponibilidad de agua superficial y subterránea. ¿Deseas conocer más detalles sobre alguna de estas fases?`;
+            } 
+            else if (query.includes("inundación") || query.includes("inundaciones")) {
+                response = 
+                `${userName}, las inundaciones ocurren cuando el agua desborda los cauces naturales. La gestión de cuencas hidrográficas es fundamental para prevenir y mitigar estos fenómenos mediante la implementación de sistemas de alerta temprana, infraestructuras de contención y planificación territorial adecuada. El cambio climático está intensificando estos eventos en muchas regiones.`;
+            } 
+            else if (query.includes("sequía") || query.includes("sequia") || query.includes("sequias")) {
+                response = 
+                `${userName}, las sequías son períodos prolongados de déficit de agua que afectan a las cuencas hidrográficas. La gestión sostenible de cuencas puede aumentar la resiliencia frente a estos eventos mediante reservorios, sistemas de recarga de acuíferos, y protección de zonas de recarga hídrica. El monitoreo constante de variables climatológicas e hidrológicas es esencial para anticipar y mitigar sus efectos.`;
+            }
+            else if (query.includes("manejo") || query.includes("gestión") || query.includes("gestion")) {
+                response = 
+                `${userName}, el manejo integrado de cuencas hidrográficas es un enfoque holístico que considera todos los recursos y actividades dentro de una cuenca. Busca equilibrar las necesidades humanas con la sostenibilidad ambiental, involucrando a todos los actores en la toma de decisiones. Incluye medidas como reforestación, terrazas en laderas, control de contaminación, y regulación del uso del agua y del suelo.`;
+            }
+            else if (query.includes("gracias") || query.includes("adiós") || query.includes("adios") || query.includes("hasta luego") || query.includes("terminar")) {
+                response = `Ha sido un placer ayudarte, ${userName}. Si tienes más preguntas sobre cuencas hidrológicas o cualquiera de nuestros temas, no dudes en iniciar una nueva conversación. ¡Hasta pronto!`;
+            } 
+            else {
+                response =
+                `Lo siento, ${userName}, no entendí tu consulta. Puedes preguntarme sobre temas como cuencas hidrológicas, hidrología, erosión, climatología o cambio climático. ¿Qué te gustaría saber?`;
+            }
+
+            // Añadir respuesta del bot
+            addMessage(response, true);
+        }
+        
+        // Reiniciar la conversación
+        function resetChat() {
+            // Limpiar todos los mensajes
+            while (chatMessages.firstChild) {
+                if (chatMessages.firstChild !== typingIndicator) {
+                    chatMessages.removeChild(chatMessages.firstChild);
+                }
+            }
+            
+            // Reiniciar variables
+            isWaitingForName = true;
+            userName = "";
+            
+            // Mensaje inicial
+            addMessage("Hola, antes de comenzar, ¿podrías decirme tu nombre?", true);
+            
+            // Enfocar el campo de entrada
+            userInput.focus();
+        }
+        
+        // Event listeners
+        sendButton.addEventListener('click', processUserInput);
+        
+        userInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                processUserInput();
+            }
+        });
+        
+        resetButton.addEventListener('click', resetChat);
+        
+        // Inicializar chat
+        window.onload = function() {
+            resetChat();
+        };
+    </script>
+</body>
+</html>
